@@ -2,6 +2,7 @@
 
 function [SV_goal, flag_goal, q_goal, w_goal] =  SQP_all(LP, SV, Goal)
 
+% flag_goal ：0 表示可达，1 表示不可达。
 flag_goal = 0;
 w_goal  = 0;
 q_goal = [];

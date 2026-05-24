@@ -43,8 +43,6 @@ parfor m = 1:num_trials
     all_errs(m) = candidate_err;
     all_exitflags(m) = exitflag;
 
-
-
 end
 
 % 优先选择满足位置等式约束的候选解，并在其中按可操作度目标函数最优选解；

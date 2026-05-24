@@ -10,7 +10,7 @@ opts.UseParallel = true;
 % opts.tar.POS_e = [0.8 0.1 0.3]';
 % opts.tar.ORI_e = cy(pi/3);
 
-nRuns = 25;
+nRuns = 40;
 dataFolder = fullfile(pwd, 'data');  % 使用绝对路径
 
 % 创建文件夹（如果不存在）
@@ -20,7 +20,7 @@ end
 
 result_all = [];
 % --------- 循环运行 ----------
-for runIdx = 21:nRuns
+for runIdx = 22:nRuns
     fprintf('Running iteration %d / %d...\n', runIdx, nRuns);
 
     tic;

@@ -20,6 +20,9 @@ disp(unique_z');
 %% =========================
 colors = turbo(length(unique_z));
 
+% 仅修改第一个颜色：黑色 -> 紫色
+colors(1,:) = [0.55 0.00 0.80];
+
 %% =========================
 % 创建图窗
 %% =========================
@@ -113,7 +116,7 @@ for i = 1:length(unique_z)-1
     surf( ...
         X, Y, Z, ...
         'FaceColor', layer_color, ...
-        'FaceAlpha', 0.30, ...
+        'FaceAlpha', 0.50, ...
         'EdgeColor', 'none');
 
 end

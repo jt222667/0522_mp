@@ -17,4 +17,4 @@ toc;
 disp('Pareto fval = [-w_goal, sig_goal, num_goal]:');
 disp(result.fval);
 
-plot_pareto(result.fval);
+plot_pareto(fval_all);

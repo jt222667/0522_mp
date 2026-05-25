@@ -1,8 +1,8 @@
 clc; clear;
 
 opts = struct();
-opts.PopulationSize = 1000;
-opts.MaxGenerations = 10;
+opts.PopulationSize = 100;
+opts.MaxGenerations = 100;
 opts.UseParallel = true;
 
 % 可选：自定义目标点
@@ -11,7 +11,9 @@ opts.UseParallel = true;
 
 result = solve_MOEA_robot(opts);
 
-disp('Pareto fval = [-w_goal, sig_goal, num_goal]:');
-disp(result.fval);
+% disp('Pareto fval = [-w_goal, sig_goal, num_goal]:');
+% disp(result.fval);
+% 
+% plot_pareto(result.fvall);
 
-plot_pareto(result.fvall);
+RWGsigeXUs8eGS7egXSa

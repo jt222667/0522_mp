@@ -36,14 +36,15 @@ gaOpts = optimoptions('gamultiobj', ...
     'Display', 'iter', ...
     'CreationFcn', @(GenomeLength,FitnessFcn,options) creation_valid(GenomeLength,FitnessFcn,options,RP_data), ...
     'MutationFcn', @(parents,options,GenomeLength,FitnessFcn,state,thisScore,thisPopulation) ...
-        mutation_valid(parents,options,GenomeLength,FitnessFcn,state,thisScore,thisPopulation,RP_data), ...
+    mutation_valid(parents,options,GenomeLength,FitnessFcn,state,thisScore,thisPopulation,RP_data), ...
     'CrossoverFcn', @(parents,options,GenomeLength,FitnessFcn,unused,thisPopulation) ...
-        crossover_valid(parents,options,GenomeLength,FitnessFcn,unused,thisPopulation,RP_data), ...
+    crossover_valid(parents,options,GenomeLength,FitnessFcn,unused,thisPopulation,RP_data), ...
     'FunctionTolerance', 1e-3);
 
 [x,fval,exitflag,output,population,scores] = gamultiobj(obj,nvars,[],[],[],[],lb,ub,[],IntCon,gaOpts);
 
 result.x = x;
+result.joint_angles = collect_joint_angles(x,RP_data,tar);
 result.fval = fval;
 result.exitflag = exitflag;
 result.output = output;
@@ -51,6 +52,31 @@ result.population = population;
 result.scores = scores;
 result.tar = tar;
 
+end
+
+function joint_angles = collect_joint_angles(x_all,RP_data,tar)
+joint_angles = cell(size(x_all,1),1);
+for i = 1:size(x_all,1)
+    x = x_all(i,:);
+    [n,module_raw,install_raw,align_raw,sequence_raw] = decode_x(x);
+    [~,~,~,~,~,is_valid,~] = expand_module_units(module_raw(1:n),install_raw(1:n),align_raw(1:n),sequence_raw(1:n),RP_data);
+    if ~is_valid
+        continue;
+    end
+    try
+        LP = LP_generate(n,module_raw,install_raw,align_raw,sequence_raw,RP_data);
+        SV = SV_generate(LP);
+        Goal = Goal_init(SV);
+        Goal.change = [1 0 0];
+        Goal.POS_e{1} = tar.POS_e;
+        Goal.ORI_e{1} = tar.ORI_e;
+        [~, flag_goal, q_goal] = SQP_all(LP,SV,Goal);
+        if ~flag_goal
+            joint_angles{i} = q_goal;
+        end
+    catch
+    end
+end
 end
 
 %% 2. 个体评估函数

@@ -63,26 +63,6 @@ for i = 1:size(x_all,1)
     q_cached = joint_angle_cache('get',key);
     if ~isempty(q_cached)
         joint_angles{i} = q_cached;
-        continue;
-    end
-    [n,module_raw,install_raw,align_raw,sequence_raw] = decode_x(x);
-    [~,~,~,~,~,is_valid,~] = expand_module_units(module_raw(1:n),install_raw(1:n),align_raw(1:n),sequence_raw(1:n),RP_data);
-    if ~is_valid
-        continue;
-    end
-    try
-        LP = LP_generate(n,module_raw,install_raw,align_raw,sequence_raw,RP_data);
-        SV = SV_generate(LP);
-        Goal = Goal_init(SV);
-        Goal.change = [1 0 0];
-        Goal.POS_e{1} = tar.POS_e;
-        Goal.ORI_e{1} = tar.ORI_e;
-        [~, flag_goal, q_goal] = SQP_all(LP,SV,Goal);
-        if ~flag_goal
-            joint_angles{i} = q_goal;
-            joint_angle_cache('set',key,q_goal);
-        end
-    catch
     end
 end
 end

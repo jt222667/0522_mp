@@ -18,8 +18,14 @@ if ~isfield(opts,'PopulationSize'), opts.PopulationSize = 100; end
 if ~isfield(opts,'MaxGenerations'), opts.MaxGenerations = 50; end
 if ~isfield(opts,'UseParallel'),    opts.UseParallel = false; end
 if ~isfield(opts,'Penalty'),        opts.Penalty = 1e6; end
+if opts.UseParallel
+    warning('solve_MOEA_robot:UseParallelDisabled', ...
+        '为保证 result.joint_angles 与 result.fval 一一对应，已将 UseParallel 强制设为 false。');
+    opts.UseParallel = false;
+end
 
 RP_data = Module_Lib();
+joint_angle_cache('reset');
 
 nvars = 53; % 1 + 4*13
 lb = [4,  ones(1,13),  ones(1,13), zeros(1,13), 0:12];
@@ -44,7 +50,7 @@ gaOpts = optimoptions('gamultiobj', ...
 [x,fval,exitflag,output,population,scores] = gamultiobj(obj,nvars,[],[],[],[],lb,ub,[],IntCon,gaOpts);
 
 result.x = x;
-result.joint_angles = collect_joint_angles(x,RP_data,tar);
+result.joint_angles = collect_joint_angles(x,fval,RP_data,tar);
 result.fval = fval;
 result.exitflag = exitflag;
 result.output = output;
@@ -54,10 +60,19 @@ result.tar = tar;
 
 end
 
-function joint_angles = collect_joint_angles(x_all,RP_data,tar)
+function joint_angles = collect_joint_angles(x_all,fval_all,RP_data,tar)
 joint_angles = cell(size(x_all,1),1);
 for i = 1:size(x_all,1)
     x = x_all(i,:);
+    key = x_key_effective(x);
+    q_cached = joint_angle_cache('get',key);
+    if ~isempty(q_cached)
+        [w_cached,is_ok] = eval_w_from_q(x,q_cached,RP_data,tar);
+        if is_ok && abs(w_cached + fval_all(i,1)) < 1e-6
+            joint_angles{i} = q_cached;
+            continue;
+        end
+    end
     [n,module_raw,install_raw,align_raw,sequence_raw] = decode_x(x);
     [~,~,~,~,~,is_valid,~] = expand_module_units(module_raw(1:n),install_raw(1:n),align_raw(1:n),sequence_raw(1:n),RP_data);
     if ~is_valid
@@ -70,9 +85,12 @@ for i = 1:size(x_all,1)
         Goal.change = [1 0 0];
         Goal.POS_e{1} = tar.POS_e;
         Goal.ORI_e{1} = tar.ORI_e;
-        [~, flag_goal, q_goal] = SQP_all(LP,SV,Goal);
+        [~, flag_goal, q_goal, w_goal] = SQP_all(LP,SV,Goal);
         if ~flag_goal
-            joint_angles{i} = q_goal;
+            if abs(w_goal + fval_all(i,1)) < 1e-6
+                joint_angles{i} = q_goal;
+                joint_angle_cache('set',key,q_goal);
+            end
         end
     catch
     end
@@ -100,18 +118,64 @@ try
     Goal.change = [1 0 0];
     Goal.POS_e{1} = tar.POS_e;
     Goal.ORI_e{1} = tar.ORI_e;
-    [SV_goal, flag_goal, ~, w_goal] = SQP_all(LP,SV,Goal);
+    [SV_goal, flag_goal, q_goal, w_goal] = SQP_all(LP,SV,Goal);
     if flag_goal
         f = [penalty, penalty, penalty];
         return;
     end
+    joint_angle_cache('set',x_key_effective(x),q_goal);
     sig_goal = calc_sig_worst_all(SV_goal,LP);
     num_goal = LP.num_goal;
     f = [-w_goal, sig_goal, num_goal];
 catch
     f = [penalty, penalty, penalty];
 end
+end
 
+function out = joint_angle_cache(action,key,val)
+persistent cache
+if isempty(cache)
+    cache = containers.Map('KeyType','char','ValueType','any');
+end
+switch action
+    case 'reset'
+        cache = containers.Map('KeyType','char','ValueType','any');
+        out = [];
+    case 'set'
+        cache(key) = val;
+        out = [];
+    case 'get'
+        if isKey(cache,key)
+            out = cache(key);
+        else
+            out = [];
+        end
+end
+end
+
+function [w,is_ok] = eval_w_from_q(x,q_goal,RP_data,tar)
+is_ok = false;
+w = NaN;
+try
+    [n,module_raw,install_raw,align_raw,sequence_raw] = decode_x(x);
+    LP = LP_generate(n,module_raw,install_raw,align_raw,sequence_raw,RP_data);
+    SV = SV_generate(LP);
+    Goal = Goal_init(SV);
+    Goal.change = [1 0 0];
+    Goal.POS_e{1} = tar.POS_e;
+    Goal.ORI_e{1} = tar.ORI_e;
+    SV_goal = Trans_aa_pos_ori(LP,SV,q_goal);
+    if norm(SV_goal.POS_e{1}-Goal.POS_e{1}) < 1e-6 && norm(SV_goal.ORI_e{1}-Goal.ORI_e{1}) < 1e-6
+        w = calc_Manipulability(LP,SV_goal);
+        is_ok = true;
+    end
+catch
+end
+end
+
+function key = x_key_effective(x)
+[n,module_raw,install_raw,align_raw,sequence_raw] = decode_x(x);
+key = sprintf('%d,',[n,module_raw,install_raw,align_raw,sequence_raw]);
 end
 
 
@@ -137,6 +201,9 @@ for i = 1:length(parents)
         child = [n,mo,is,al,se];
     else
         idx = randi(14); % 只轻微扰动 n + module_raw
+
+
+
         if idx == 1
             child(1) = randi([4 10]);
         else

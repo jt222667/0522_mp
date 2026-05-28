@@ -2,7 +2,7 @@
 
 function [SV, flag, q_k, err_k, w_k] = SQP_main(LP, SV, Goal, k)
 
-num_trials = 10;
+num_trials = 100;
 reach_tol = 1e-5;
 
 options = optimoptions('fmincon', ...

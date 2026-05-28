@@ -5,7 +5,7 @@ function PlotSV(LP,SV)
 figure; hold on; grid on; view([90 0]);
 axis equal;
 xlabel('X/m'); ylabel('Y/m'); zlabel('Z/m');
-title('机器人末端点三维分布（标注+相邻点连线）');
+% title('机器人末端点三维分布（标注+相邻点连线）');
 colors = {'r', 'g', 'b', 'c', 'm', 'y', 'k'};
 
 % 绘制基座,基座接口点
@@ -43,4 +43,7 @@ for i = 1:SV.m
     text(SV.POS_e{i}(1)+0.03,SV.POS_e{i}(2)+0.03,SV.POS_e{i}(3)+0.03,sprintf('(%.3f,%.3f,%.3f)  末端%d',SV.POS_e{i}(1),SV.POS_e{i}(2),SV.POS_e{i}(3),i),'FontSize',8, 'Color','k');
 
 end
+
+axis equal;
+
 end
